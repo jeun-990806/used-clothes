@@ -6,56 +6,58 @@ const session_check = require("../middlewares/session_check");
 
 /**
  * @swagger
- *  /clothe/create:
- *    post:
- *      tags: [clothe]
- *      description: 판매할 의류를 등록합니다.
- *      parameters:
- *        - in: "body"
- *          name: "body"
- *          description: ""
- *          required: true
+ * /clothe/create:
+ *  post:
+ *    tags: [clothe]
+ *    summary: 판매할 의류를 등록합니다.
+ *    requestBody:
+ *      description: 의류 정보
+ *      required: true
+ *      content:
+ *        multipart/form-data:
  *          schema:
- *              type: multipart/form-data
- *              properties:
- *                  images:
- *                      type: file
- *                  name:
- *                      type: string
- *                  category_id:
- *                      type: integer
- *                  price:
- *                      type: string
- *                  condition_code:
- *                      type: integer
- *                  shipping_fee:
- *                      type: string
- *                  brand_id:
- *                      type: integer
- *                  purchase_place_id:
- *                      type: integer
- *                  ex_price:
- *                      type: string
- *                  color_code_1:
- *                      type: string
- *                  color_code_2:
- *                      type: string
- *                  purchase_date:
- *                      type: string
- *                  material_code_1:
- *                      type: integer
- *                  material_code_2:
- *                      type: integer
- *                  material_code_3:
- *                      type: integer
- *      responses:
- *          200:
- *              description: 의류 정보 업로드 완료.
- *          401:
- *              description: 로그인하지 않은 사용자.
- *          500:
- *              description: DB 커넥션 오류.
+ *            properties:
+ *              images:
+ *                type: string
+ *              name:
+ *                type: string
+ *              category_id:
+ *                type: integer
+ *              price:
+ *                type: string
+ *              condition_code:
+ *                type: integer
+ *              shipping_fee:
+ *                type: string
+ *              brand_id:
+ *                type: integer
+ *              purchase_place_id:
+ *                type: integer
+ *              ex_price:
+ *                type: string
+ *              color_code_1:
+ *                  type: string
+ *              color_code_2:
+ *                  type: string
+ *              purchase_date:
+ *                  type: string
+ *              material_code_1:
+ *                  type: integer
+ *              material_code_2:
+ *                  type: integer
+ *              material_code_3:
+ *                  type: integer
+ *          encoding:
+ *            images:
+ *              contentType: image/png, image/jpg, image/jpeg
  *
+ *    responses:
+ *      200:
+ *        description: 의류 정보 업로드 완료.
+ *      401:
+ *        description: 로그인하지 않은 사용자.
+ *      500:
+ *        description: DB 커넥션 오류.
  */
 
 const sql_maker = (clothe_info) => {
@@ -138,26 +140,27 @@ router.post(
 
 /**
  * @swagger
- *  /clothe/read:
- *    get:
- *      tags: [clothe]
- *      description: 등록된 의류 정보를 받아옵니다.
- *      parameters:
- *        - in: "params"
- *          name: "clothe_id"
- *          schema:
- *              type: number
- *          description: "의류 ID"
- *          required: true
- *      responses:
- *          200:
- *              description: 조회 성공. 의류 등록 정보 JSON 반환.
- *          400:
- *              description: 의류 ID 주어지지 않음.
- *          404:
- *              description: 해당 ID의 의류가 존재하지 않음.
- *          500:
- *              description: DB 커넥션 오류.
+ * /clothe/read:
+ *  get:
+ *    tags: [clothe]
+ *    description: 등록된 의류 정보를 받아옵니다.
+ *    parameters:
+ *      - in: query
+ *        name: "clothe_id"
+ *        schema:
+ *          type: number
+ *        description: "의류 ID"
+ *        required: true
+ *
+ *    responses:
+ *      200:
+ *        description: 조회 성공. 의류 등록 정보 JSON 반환.
+ *      400:
+ *        description: 의류 ID 주어지지 않음.
+ *      404:
+ *        description: 해당 ID의 의류가 존재하지 않음.
+ *      500:
+ *        description: DB 커넥션 오류.
  */
 
 router.get("/read", async (request, response) => {
