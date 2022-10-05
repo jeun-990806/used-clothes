@@ -1,18 +1,31 @@
-const express = require('express')
-const { swagger_ui, specs } = require('./configs/swagger')
+const express = require("express");
+const { swagger_ui, specs } = require("./configs/swagger");
+const multer = require("multer");
 
-const user_router = require('./routers/user')
+const session = require("express-session");
 
-const app = express()
-const port = process.env.PORT || 3000
+const user_router = require("./routers/user");
+const clothe_router = require("./routers/clothe");
 
-app.use(express.json())
-app.use(express.urlencoded({extended: true}))
-app.use('/user', user_router)
+const app = express();
+const port = process.env.PORT || 3000;
 
-app.use('/api-docs', swagger_ui.serve, swagger_ui.setup(specs))
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  session({
+    secret: "keyboard cat",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+
+app.use("/user", user_router);
+app.use("/clothe", clothe_router);
+
+app.use("/api-docs", swagger_ui.serve, swagger_ui.setup(specs));
 
 app.listen(port, () => {
-	console.log(`server is listening at port ${port}`)
-})
-
+  console.log(`server is listening at port ${port}`);
+});
