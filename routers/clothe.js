@@ -203,9 +203,9 @@ router.get("/read", async (request, response) => {
  *        description: "검색을 원하는 조건. ','로 구분합니다. (ex key1=value1,key2=value2)<br><br>
  *                      <b>검색 가능한 키 값</b>: <br>
  *                       <ul>
- *                        <li>user_email: 등록한 사용자 이메일</li>
  *                        <li>name: 등록된 이름</li>
  *                        <li>category_id: 카테고리</li>
+ *                        <li>condition_code: 최소 상태</li>
  *                        <li>max_price: 최대 가격</li>
  *                        <li>min_price: 최소 가격</li>
  *                        <li>shipping_fee: 배송비</li>
@@ -224,7 +224,47 @@ router.get("/read", async (request, response) => {
  */
 
 const query_parser = (query) => {
-  return [...query.matchAll(/(?<key>[a-z_]+)=(?<value>[a-z0-9_]+)/g)];
+  let parsing_data = [...query.matchAll(/(?<key>[a-zA-Z0-9_*&]+)=(?<value>[a-zA-Z0-9_*&]+)/g)];
+  let parsing_result = {}
+
+  for(var row of parsing_data){
+    parsing_result[row.groups.key] = row.groups.value
+  }
+
+  return parsing_result
 };
+
+router.get("/list", async (request, response) => {
+  const db_pool = await mysql_pool.get_pool();
+  db_pool.getConnection((error, connection) => {
+    if (error) response.sendStatus(500);
+    else {
+      const parsing_result = query_parser(connection.escape(request.query.filters))
+      const valid_keys = ['name', 'category_code', 'condition_id', 'max_price', 'min_price', 'shipping_fee', 'brand_id', 'purchase_place_id', 'color_code', 'material_code']
+      let condition_strings = []
+
+      for(var key in parsing_result){
+        if(valid_keys.indexOf(key) !== -1){
+          if(key === 'name') condition_strings.push("name LIKE '%" + parsing_result[key] + "%'")
+          else if(key === 'max_price') condition_strings.push("price <= " + parsing_result[key])
+          else if(key === 'min_price') condition_strings.push("price >= " + parsing_result[key])
+          else if(key === 'shipping_fee') condition_strings.push("shipping_fee = " + parsing_result[key])
+          else if(key === 'condition_code') condition_strings.push("condition_code <= " + parsing_result[key])
+          else condition_strings.push(key + " = " + parsing_result[key])
+        }
+      } 
+      connection.query(
+        `SELECT * FROM clothes WHERE ` + condition_strings.join(" AND ") + ';',
+        (error, rows) => {
+          if (error) response.sendStatus(500);
+          else {
+            response.status(200);
+            response.send(rows);
+          }
+        }
+      );
+    }
+  });
+})
 
 module.exports = router;
