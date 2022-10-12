@@ -240,7 +240,7 @@ router.get("/list", async (request, response) => {
     if (error) response.sendStatus(500);
     else {
       const parsing_result = query_parser(connection.escape(request.query.filters))
-      const valid_keys = ['name', 'category_code', 'condition_id', 'max_price', 'min_price', 'shipping_fee', 'brand_id', 'purchase_place_id', 'color_code', 'material_code']
+      const valid_keys = ['name', 'category_code', 'condition_code', 'max_price', 'min_price', 'shipping_fee', 'brand_id', 'purchase_place_id', 'color_code', 'material_code']
       let condition_strings = []
 
       for(var key in parsing_result){
@@ -252,9 +252,12 @@ router.get("/list", async (request, response) => {
           else if(key === 'condition_code') condition_strings.push("condition_code <= " + parsing_result[key])
           else condition_strings.push(key + " = " + parsing_result[key])
         }
-      } 
+      }
+
+      let where_clause = ''
+      if(condition_strings.length > 0) where_clause = ' WHERE ' +  condition_strings.join(" AND ")
       connection.query(
-        `SELECT * FROM clothes WHERE ` + condition_strings.join(" AND ") + ';',
+        'SELECT * FROM clothes ' + where_clause + ';',
         (error, rows) => {
           if (error) response.sendStatus(500);
           else {
@@ -265,6 +268,58 @@ router.get("/list", async (request, response) => {
       );
     }
   });
+})
+
+/**
+ * @swagger
+ * /clothe/delete:
+ *  delete:
+ *    tags: [clothe]
+ *    description: 특정 ID의 의류를 삭제합니다.
+ *    parameters:
+ *      - in: query
+ *        name: "clothe_id"
+ *        schema:
+ *          type: number
+ *        description: "의류 ID"
+ *        required: true
+ *
+ *    responses:
+ *      200:
+ *        description: 삭제 성공.
+ *      403:
+ *        description: 의류 삭제 권한이 없음. (업로더가 아님)
+ *      404:
+ *        description: 해당 ID의 의류가 존재하지 않음.
+ *      500:
+ *        description: DB 커넥션 오류.
+ */
+
+router.delete('/delete', session_check, async (request, response) => {
+  const db_pool = await mysql_pool.get_pool();
+  db_pool.getConnection((error, connection) => {
+    if (error) response.sendStatus(500);
+    else {
+      const clothe_id = connection.escape(request.query.clothe_id)
+      connection.query(
+        'SELECT * FROM clothes WHERE clothe_id=' + clothe_id + ';',
+        (error, rows) => {
+          if (error) response.sendStatus(500);
+          else {
+            if(rows.length !== 1) response.sendStatus(404)
+            else {
+              if(rows[0].user_email === request.session.user_email){
+                connection.query('DELETE FROM clothes WHERE clothe_id=' + clothe_id + ';', (error, rows) => {
+                  if(error) response.sendStatus(500)
+                  else response.sendStatus(200)
+                })
+              } else response.sendStatus(403)
+            }
+          }
+        }
+      );
+    }
+  });  
 })
 
 module.exports = router;
