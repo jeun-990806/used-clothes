@@ -3,6 +3,7 @@ const router = require("express").Router();
 const mysql_pool = require("../mysql_pools");
 const image_file_uploader = require("../middlewares/image_uploader");
 const session_check = require("../middlewares/session_check");
+const tools = require("../tools/tools");
 
 /**
  * @swagger
@@ -60,20 +61,6 @@ const session_check = require("../middlewares/session_check");
  *        description: DB 커넥션 오류.
  */
 
-const sql_maker = (clothe_info) => {
-  let fields = "(";
-  let values = "(";
-  for (var field in clothe_info) {
-    fields += field + ", ";
-    if (typeof clothe_info[field] === "string")
-      values += "'" + clothe_info[field] + "', ";
-    else values += clothe_info[field] + ", ";
-  }
-  fields = fields.slice(0, -2) + ")";
-  values = values.slice(0, -2) + ")";
-  return "INSERT INTO clothes " + fields + " VALUES " + values + ";";
-};
-
 router.post(
   "/create",
   session_check,
@@ -110,29 +97,32 @@ router.post(
     db_pool.getConnection((error, connection) => {
       if (error) response.sendStatus(500);
       else {
-        connection.query(sql_maker(clothe_info), (error, result) => {
-          if (error) response.sendStatus(400);
-          else {
-            var clothe_id = result.insertId;
-            var status_code = 200;
-            for (var image_file of request.files) {
-              console.log(image_file);
-              var file_name = image_file.filename;
-              var file_type = image_file.mimetype;
-              var current_date = new Date();
-              var upload_date = `${current_date.getFullYear()}-${current_date.getMonth()}-${current_date.getDay()}`;
-              var upload_time = `${current_date.getHours()}:${current_date.getMinutes()}:${current_date.getSeconds()}`;
-              connection.query(
-                `INSERT INTO images (file_name, clothe_id, user_email, file_type, upload_date, upload_time) VALUES ('${file_name}', '${clothe_id}', '${request.session.user_email}', '${file_type}', '${upload_date}', '${upload_time}');`,
-                (error, result) => {
-                  if (error) status_code = 500;
-                }
-              );
-              if (status_code === 500) break;
+        connection.query(
+          tools.dictionary_to_sql("clothes", clothe_info),
+          (error, result) => {
+            if (error) response.sendStatus(400);
+            else {
+              var clothe_id = result.insertId;
+              var status_code = 200;
+              for (var image_file of request.files) {
+                console.log(image_file);
+                var file_name = image_file.filename;
+                var file_type = image_file.mimetype;
+                var current_date = new Date();
+                var upload_date = `${current_date.getFullYear()}-${current_date.getMonth()}-${current_date.getDay()}`;
+                var upload_time = `${current_date.getHours()}:${current_date.getMinutes()}:${current_date.getSeconds()}`;
+                connection.query(
+                  `INSERT INTO images (file_name, clothe_id, user_email, file_type, upload_date, upload_time) VALUES ('${file_name}', '${clothe_id}', '${request.session.user_email}', '${file_type}', '${upload_date}', '${upload_time}');`,
+                  (error, result) => {
+                    if (error) status_code = 500;
+                  }
+                );
+                if (status_code === 500) break;
+              }
+              response.sendStatus(status_code);
             }
-            response.sendStatus(status_code);
           }
-        });
+        );
       }
     });
   }
@@ -198,5 +188,43 @@ router.get("/read", async (request, response) => {
     }
   });
 });
+
+/**
+ * @swagger
+ * /clothe/list:
+ *  get:
+ *    tags: [clothe]
+ *    description: 필터 조건을 만족하는 의류 정보 리스트를 반환합니다.
+ *    parameters:
+ *      - in: query
+ *        name: "filters"
+ *        schema:
+ *          type: string
+ *        description: "검색을 원하는 조건. ','로 구분합니다. (ex key1=value1,key2=value2)<br><br>
+ *                      <b>검색 가능한 키 값</b>: <br>
+ *                       <ul>
+ *                        <li>user_email: 등록한 사용자 이메일</li>
+ *                        <li>name: 등록된 이름</li>
+ *                        <li>category_id: 카테고리</li>
+ *                        <li>max_price: 최대 가격</li>
+ *                        <li>min_price: 최소 가격</li>
+ *                        <li>shipping_fee: 배송비</li>
+ *                        <li>brand_id: 브랜드</li>
+ *                        <li>purchase_place_id: 구입처</li>
+ *                        <li>color_code: 색상</li>
+ *                        <li>material_code: 소재</li>
+ *                       </ul>"
+ *        required: true
+ *
+ *    responses:
+ *      200:
+ *        description: 조회 성공. 의류 정보 JSON 반환.
+ *      500:
+ *        description: DB 커넥션 오류.
+ */
+
+const query_parser = (query) => {
+  return [...query.matchAll(/(?<key>[a-z_]+)=(?<value>[a-z0-9_]+)/g)];
+};
 
 module.exports = router;
