@@ -98,6 +98,32 @@ router.post("/create", async (request, response) => {
  *    responses:
  *      200:
  *        description: 로그인 성공. 사용자 정보 JSON 반환.
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                email:
+ *                  type: string
+ *                  example: test_user
+ *                password:
+ *                  type: string
+ *                  example: $jfeoiqwjw...
+ *                name:
+ *                  type: string
+ *                  example: test_name
+ *                location_scope_a_code:
+ *                  type: string
+ *                  example: 394
+ *                location_scope_b_code:
+ *                  type: string
+ *                  example: 03
+ *                location_scope_c_ode:
+ *                  type: string
+ *                  example: 209
+ *                phone:
+ *                  type: string
+ *                  example: 010-0000-0000
  *      400:
  *        description: 로그인 정보 불충분. (사용자 이메일 또는 비밀번호 중 하나 이상이 주어지지 않음)
  *      401:
@@ -129,7 +155,7 @@ router.get("/read", async (request, response) => {
             ) {
               request.session.user_email = user_email;
               response.status(200);
-              response.send(rows);
+              response.send(rows[0]);
             } else response.sendStatus(401);
           }
         }
