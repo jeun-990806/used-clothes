@@ -107,7 +107,7 @@ router.post("/main/create", async (request, response) => {
 
 /**
  * @swagger
- * /category/main/list:
+ * /category/sub/list:
  *  get:
  *    tags: [category]
  *    description: 서브 카테고리 리스트를 반환합니다.
