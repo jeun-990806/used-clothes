@@ -283,7 +283,36 @@ router.get("/read", async (request, response) => {
  *                        <li>color_code: 색상 (중복 가능)</li>
  *                        <li>material_code: 소재 (중복 가능)</li>
  *                       </ul>"
- *        required: true
+ *      - in: query
+ *        name: "sort_by"
+ *        schema:
+ *          type: string
+ *        description: "정렬 조건<br><br>
+ *                      <b>선택 가능한 값</b>: <br>
+ *                       <ul>
+ *                        <li>price: 가격</li>
+ *                        <li>upload_date: 업로드 날짜</li>
+ *                       </ul>"
+ *      - in: query
+ *        name: "order"
+ *        schema:
+ *          type: string
+ *        description: "정렬 순서<br><br>
+ *                      <b>선택 가능한 값</b>: <br>
+ *                       <ul>
+ *                        <li>asc: 오름차순</li>
+ *                        <li>desc: 내림차순</li>
+ *                       </ul>"
+ *      - in: query
+ *        name: "elements"
+ *        schema:
+ *          type: integer
+ *        description: "한 페이지에 표시할 의류 개수"
+ *      - in: query
+ *        name: "page"
+ *        schema:
+ *          type: integer
+ *        description: "페이지 번호"
  *
  *    responses:
  *      200:
@@ -479,9 +508,28 @@ router.get("/list", async (request, response) => {
       let where_clause = "";
       if (condition_strings.length > 0)
         where_clause = " WHERE " + condition_strings.join(" AND ");
+      let order_clause = "";
+      if (request.query.sort_by) {
+        order_clause = "ORDER BY " + request.query.sort_by;
+        if (request.query.order) order_clause += " " + request.query.order;
+      }
+      let limit_clause = "";
+      if (request.query.page && request.query.elements) {
+        const page_num = request.query.page;
+        const offset = request.query.elements * page_num;
+        limit_clause = "LIMIT " + offset + ", " + request.query.elements;
+      }
       connection.query(
-        "SELECT * FROM clothes " + where_clause + ";",
+        "SELECT * FROM clothes " +
+          where_clause +
+          " " +
+          order_clause +
+          " " +
+          limit_clause +
+          ";",
         (error, rows) => {
+          console.log(error);
+
           if (error) response.sendStatus(500);
           else {
             response.status(200);
