@@ -4,6 +4,7 @@ const mysql_pool = require("../mysql_pools");
 
 const bcrypt = require("bcrypt");
 const session_check = require("../middlewares/session_check");
+const session = require("express-session");
 
 /**
  * @swagger
@@ -78,10 +79,75 @@ router.post("/create", async (request, response) => {
 
 /**
  * @swagger
- * /user/read:
+ * /user/list:
  *  get:
  *    tags: [user]
- *    description: 이메일과 패스워드가 일치하는 사용자 정보를 가져오고, 있는 경우 세션에 등록(로그인)합니다.
+ *    description: 사용자 리스트를 반환합니다.
+ *
+ *    responses:
+ *      200:
+ *        description: 사용자 정보 JSON 반환
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: array
+ *              items:
+ *                type: object
+ *                properties:
+ *                  email:
+ *                    type: string
+ *                    example: test_user
+ *                  name:
+ *                    type: string
+ *                    example: test_name
+ *                  location_scope_a_code:
+ *                    type: string
+ *                    example: 394
+ *                  location_scope_b_code:
+ *                    type: string
+ *                    example: 03
+ *                  location_scope_c_ode:
+ *                    type: string
+ *                    example: 209
+ *                  phone:
+ *                    type: string
+ *                    example: 010-0000-0000
+ *      500:
+ *        description: DB 커넥션 오류.
+ */
+router.get("/list", async (request, response) => {
+  const db_pool = await mysql_pool.get_pool();
+  db_pool.getConnection((error, connection) => {
+    if (error) response.sendStatus(500);
+    else {
+      connection.query("SELECT * FROM users;", (error, rows) => {
+        if (error) response.sendStatus(500);
+        else {
+          response.status(200);
+          let result = [];
+          for (var row of rows) {
+            result.push({
+              email: row["email"],
+              name: row["name"],
+              location_scope_a_code: row["location_scope_a_code"],
+              location_scope_b_code: row["location_scope_b_code"],
+              location_scope_c_code: row["location_scope_c_code"],
+              phone: row["phone"],
+            });
+          }
+          response.send(result);
+        }
+      });
+    }
+  });
+});
+
+/**
+ * @swagger
+ * /user/login:
+ *  get:
+ *    tags: [user]
+ *    description: 이메일과 패스워드를 사용해 로그인합니다.
  *    parameters:
  *      - in: query
  *        name: email
@@ -98,33 +164,7 @@ router.post("/create", async (request, response) => {
  *
  *    responses:
  *      200:
- *        description: 로그인 성공. 사용자 정보 JSON 반환.
- *        content:
- *          application/json:
- *            schema:
- *              type: object
- *              properties:
- *                email:
- *                  type: string
- *                  example: test_user
- *                password:
- *                  type: string
- *                  example: $jfeoiqwjw...
- *                name:
- *                  type: string
- *                  example: test_name
- *                location_scope_a_code:
- *                  type: string
- *                  example: 394
- *                location_scope_b_code:
- *                  type: string
- *                  example: 03
- *                location_scope_c_ode:
- *                  type: string
- *                  example: 209
- *                phone:
- *                  type: string
- *                  example: 010-0000-0000
+ *        description: 로그인 성공.
  *      400:
  *        description: 로그인 정보 불충분. (사용자 이메일 또는 비밀번호 중 하나 이상이 주어지지 않음)
  *      401:
@@ -132,7 +172,7 @@ router.post("/create", async (request, response) => {
  *      500:
  *        description: 비밀번호 암호화 오류 또는 DB 커넥션 오류.
  */
-router.get("/read", async (request, response) => {
+router.get("/login", async (request, response) => {
   user_email = request.query.email;
   user_password = request.query.password;
 
@@ -155,14 +195,87 @@ router.get("/read", async (request, response) => {
               bcrypt.compareSync(user_password, rows[0].password)
             ) {
               request.session.user_email = user_email;
-              response.status(200);
-              response.send(rows[0]);
+              response.sendStatus(200);
             } else response.sendStatus(401);
           }
         }
       );
     }
   });
+});
+
+/**
+ * @swagger
+ * /user/logout:
+ *  get:
+ *    tags: [user]
+ *    description: 세션을 삭제합니다.
+ *
+ *    responses:
+ *      200:
+ *        description: 로그아웃 성공.
+ *      401:
+ *        description: 로그아웃 실패. (이미 로그아웃되어 있음)
+ */
+router.get("/logout", session_check, (request, response) => {
+  request.session.destroy(() => {
+    request.session;
+  });
+  response.sendStatus(200);
+});
+
+/**
+ * @swagger
+ * /user/delete:
+ *  delete:
+ *    tags: [user]
+ *    description: 특정 사용자를 삭제합니다.
+ *    parameters:
+ *      - in: query
+ *        name: "user_email"
+ *        schema:
+ *          type: string
+ *        description: "사용자 이메일"
+ *        required: true
+ *
+ *    responses:
+ *      200:
+ *        description: 삭제 성공.
+ *      403:
+ *        description: 삭제 권한이 없음.
+ *      404:
+ *        description: 해당 이메일의 사용자가 존재하지 않음.
+ *      500:
+ *        description: DB 커넥션 오류.
+ */
+
+router.delete("/delete", session_check, async (request, response) => {
+  const user_email = request.query.user_email;
+  if (user_email !== request.session.user_email) {
+    response.sendStatus(403);
+  } else {
+    const db_pool = await mysql_pool.get_pool();
+    db_pool.getConnection((error, connection) => {
+      if (error) response.sendStatus(500);
+      else {
+        connection.query(
+          "DELETE FROM users WHERE email='" + user_email + "';",
+          (error, result) => {
+            if (error) response.sendStatus(500);
+            else {
+              if (result.affectedRows === 0) response.sendStatus(404);
+              else {
+                request.session.destroy(() => {
+                  request.session;
+                });
+                response.sendStatus(200);
+              }
+            }
+          }
+        );
+      }
+    });
+  }
 });
 
 /**
