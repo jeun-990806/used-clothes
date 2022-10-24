@@ -3,6 +3,7 @@ const router = require("express").Router();
 const mysql_pool = require("../mysql_pools");
 
 const bcrypt = require("bcrypt");
+const session_check = require("../middlewares/session_check");
 
 /**
  * @swagger
@@ -162,6 +163,72 @@ router.get("/read", async (request, response) => {
       );
     }
   });
+});
+
+/**
+ * @swagger
+ * /user/update:
+ *  put:
+ *    tags: [user]
+ *    description: 특정 사용자의 정보를 수정합니다.
+ *    parameters:
+ *      - in: query
+ *        name: "user_email"
+ *        schema:
+ *          type: string
+ *        description: "사용자 이메일"
+ *        required: true
+ *    requestBody:
+ *      description: 수정할 사용자 정보
+ *      required: true
+ *      content:
+ *        application/json:
+ *          schema:
+ *            properties:
+ *              name:
+ *                type: string
+ *              password:
+ *                type: string
+ *
+ *    responses:
+ *      200:
+ *        description: 수정 성공.
+ *      403:
+ *        description: 수정 권한이 없음.
+ *      404:
+ *        description: 해당 이메일의 사용자가 존재하지 않음.
+ *      500:
+ *        description: DB 커넥션 오류.
+ */
+
+router.put("/update", session_check, async (request, response) => {
+  const user_email = request.query.user_email;
+  if (user_email !== request.session.user_email) {
+    response.sendStatus(403);
+  } else {
+    let update_sql = "UPDATE users SET ";
+    if (request.body.name !== undefined) {
+      update_sql += "name='" + request.body.name + "' ";
+    }
+    if (request.body.password !== undefined) {
+      const new_password = bcrypt.hashSync(request.body.password, 5);
+      update_sql += "password='" + new_password + "' ";
+    }
+    update_sql += "WHERE email='" + user_email + "';";
+    const db_pool = await mysql_pool.get_pool();
+    db_pool.getConnection((error, connection) => {
+      if (error) response.sendStatus(500);
+      else {
+        connection.query(update_sql, (error, result) => {
+          if (error) response.sendStatus(500);
+          else {
+            if (result.affectedRows === 0) response.sendStatus(403);
+            else response.sendStatus(200);
+          }
+        });
+      }
+    });
+  }
 });
 
 module.exports = router;

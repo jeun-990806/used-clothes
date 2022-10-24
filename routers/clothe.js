@@ -602,4 +602,103 @@ router.delete("/delete", session_check, async (request, response) => {
   });
 });
 
+/**
+ * @swagger
+ * /clothe/update:
+ *  put:
+ *    tags: [clothe]
+ *    description: 특정 ID의 의류 정보를 수정합니다.
+ *    parameters:
+ *      - in: query
+ *        name: "clothe_id"
+ *        schema:
+ *          type: number
+ *        description: "의류 ID"
+ *        required: true
+ *    requestBody:
+ *      description: 수정할 의류 정보
+ *      required: true
+ *      content:
+ *        application/json:
+ *          schema:
+ *            properties:
+ *              name:
+ *                type: string
+ *              main_category_id:
+ *                type: integer
+ *              sub_category_id:
+ *                type: integer
+ *              price:
+ *                type: string
+ *              condition_code:
+ *                type: integer
+ *              shipping_fee:
+ *                type: string
+ *              brand_id:
+ *                type: integer
+ *              purchase_place_id:
+ *                type: integer
+ *              ex_price:
+ *                type: string
+ *              color_code_1:
+ *                  type: string
+ *              color_code_2:
+ *                  type: string
+ *              purchase_date:
+ *                  type: string
+ *              material_code_1:
+ *                  type: integer
+ *              material_code_2:
+ *                  type: integer
+ *              material_code_3:
+ *                  type: integer
+ *
+ *    responses:
+ *      200:
+ *        description: 수정 성공.
+ *      403:
+ *        description: 의류 수정 권한이 없음. (업로더가 아님)
+ *      404:
+ *        description: 해당 ID의 의류가 존재하지 않음.
+ *      500:
+ *        description: DB 커넥션 오류.
+ */
+
+router.put("/update", session_check, async (request, response) => {
+  const target_id = request.query.clothe_id;
+  const user_email = request.session.user_email;
+
+  if (target_id === undefined) {
+    response.sendStatus(404);
+  } else {
+    let update_sql = "UPDATE clothes SET ";
+    for (var field in request.body) {
+      if (
+        field === "name" ||
+        field.includes("color_code") ||
+        field.includes("material_code") ||
+        field.includes("date")
+      ) {
+        update_sql += field + "='" + request.body[field] + "' ";
+      } else update_sql += field + "=" + request.body[field] + " ";
+    }
+    update_sql +=
+      "WHERE clothe_id=" + target_id + " AND user_email='" + user_email + "';";
+
+    const db_pool = await mysql_pool.get_pool();
+    db_pool.getConnection((error, connection) => {
+      if (error) response.sendStatus(500);
+      else {
+        connection.query(update_sql, (error, result) => {
+          if (error) response.sendStatus(500);
+          else {
+            if (result.affectedRows === 0) response.sendStatus(403);
+            else response.sendStatus(200);
+          }
+        });
+      }
+    });
+  }
+});
+
 module.exports = router;
