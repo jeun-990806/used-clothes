@@ -145,22 +145,20 @@ router.get("/list", async (request, response) => {
 /**
  * @swagger
  * /user/login:
- *  get:
+ *  post:
  *    tags: [user]
  *    description: 이메일과 패스워드를 사용해 로그인합니다.
- *    parameters:
- *      - in: query
- *        name: email
- *        schema:
- *          type: string
- *        description: 사용자 이메일
- *        required: true
- *      - in: query
- *        name: password
- *        schema:
- *          type: string
- *        description: 사용자 패스워드
- *        required: true
+ *    requestBody:
+ *      description: 로그인 정보
+ *      required: true
+ *      content:
+ *        application/json:
+ *          schema:
+ *            properties:
+ *              email:
+ *                type: string
+ *              password:
+ *                type: string
  *
  *    responses:
  *      200:
@@ -172,9 +170,9 @@ router.get("/list", async (request, response) => {
  *      500:
  *        description: 비밀번호 암호화 오류 또는 DB 커넥션 오류.
  */
-router.get("/login", async (request, response) => {
-  user_email = request.query.email;
-  user_password = request.query.password;
+router.post("/login", async (request, response) => {
+  user_email = request.body.email;
+  user_password = request.body.password;
 
   if (user_email === undefined || user_password === undefined) {
     response.sendStatus(400);
