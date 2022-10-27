@@ -3,6 +3,7 @@ const { swagger_ui, specs } = require("./configs/swagger");
 const multer = require("multer");
 const fs = require("fs");
 const session = require("express-session");
+const cors = require("cors");
 
 const user_router = require("./routers/user");
 const clothe_router = require("./routers/clothe");
@@ -12,6 +13,7 @@ const category_router = require("./routers/category");
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 if (!fs.existsSync("./images")) {
