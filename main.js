@@ -9,6 +9,8 @@ const user_router = require("./routers/user");
 const clothe_router = require("./routers/clothe");
 const clothe_metadata_router = require("./routers/clothe_metadata");
 const category_router = require("./routers/category");
+const location_router = require("./routers/location");
+const brand_router = require("./routers/brand");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -32,6 +34,8 @@ app.use("/user", user_router);
 app.use("/clothe", clothe_router);
 app.use("/clothe_metadata", clothe_metadata_router);
 app.use("/category", category_router);
+app.use("/location", location_router);
+app.use("/brand", brand_router);
 
 app.use("/api-docs", swagger_ui.serve, swagger_ui.setup(specs));
 
