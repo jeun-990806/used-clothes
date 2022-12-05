@@ -342,4 +342,29 @@ router.put("/update", session_check, async (request, response) => {
   }
 });
 
+/**
+ * @swagger
+ * /user/login_check:
+ *  get:
+ *    tags: [user]
+ *    description: 현재 접속중인 브라우저에 대한 로그인 세션이 유효한지 확인합니다.
+ *
+ *    responses:
+ *      200:
+ *        description: 세션 데이터 확인 완료
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                result:
+ *                  type: string
+ *                  example: y
+ */
+router.get("/login_check", async (request, response) => {
+  response.status(200);
+  if (request.session.user_email === undefined) response.send({ result: "n" });
+  else response.send({ result: "y" });
+});
+
 module.exports = router;
