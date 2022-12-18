@@ -178,10 +178,7 @@ router.post(
  *                  example: 2500
  *                upload_date:
  *                  type: string
- *                  example: 2022-09-05T15:00:00.00Z
- *                upload_time:
- *                  type: string
- *                  example: 20:41:58
+ *                  example: 2022-09-05T15:20:41:58Z
  *                brand_id:
  *                  type: integer
  *                  example: 4
@@ -200,6 +197,12 @@ router.post(
  *                material_code:
  *                  type: array
  *                  example: [1, 3]
+ *                location:
+ *                  type: string
+ *                  example: 1101053
+ *                images:
+ *                  type: array
+ *                  example: ['https://used-clothes.o-r.kr/images/abcd.jpg']
  *                description:
  *                  type: string
  *                  example: null
@@ -224,35 +227,56 @@ router.get("/read", async (request, response) => {
     if (error) response.sendStatus(500);
     else {
       connection.query(
-        `SELECT * FROM clothes WHERE clothe_id=${clothe_id}`,
+        `SELECT * FROM clothes JOIN images ON clothes.clothe_id=images.clothe_id WHERE clothes.clothe_id=${clothe_id}`,
         (error, rows) => {
           if (error) response.sendStatus(500);
           else {
             if (rows.length === 0) response.sendStatus(404);
             else {
-              const { file_name, file_type, ...result } = rows[0];
-              result["images"] = [];
-              for (var file_data of rows) {
-                result["images"].push({
-                  file_name: file_data.file_name,
-                });
-              }
-              result["color_code"] = [
-                result["color_code_1"],
-                result["color_code_2"],
-              ];
-              delete result["color_code_1"];
-              delete result["color_code_2"];
-              result["material_code"] = [
-                result["material_code_1"],
-                result["material_code_2"],
-                result["material_code_3"],
-              ];
-              delete result["material_code_1"];
-              delete result["material_code_2"];
-              delete result["material_code_3"];
-              response.status(200);
-              response.send(result);
+              const result = rows[0];
+              connection.query(
+                `SELECT location_scope_c_code FROM users WHERE email='${result["user_email"]}'`,
+                (error, user_data) => {
+                  if (error) response.sendStatus(500);
+                  else {
+                    result["location_code"] =
+                      user_data[0]["location_scope_c_code"];
+                    result["images"] = [];
+                    for (var file_data of rows) {
+                      result["images"].push({
+                        file_name:
+                          "https://used-clothes.o-r.kr/" + file_data.file_name,
+                      });
+                    }
+                    result["upload_date"].setHours(
+                      parseInt(result["upload_time"].split(":")[0]) + 9
+                    );
+                    result["upload_date"].setMinutes(
+                      result["upload_time"].split(":")[1]
+                    );
+                    result["upload_date"].setSeconds(
+                      result["upload_time"].split(":")[2]
+                    );
+                    delete result["upload_time"];
+                    result["color_code"] = [
+                      result["color_code_1"],
+                      result["color_code_2"],
+                    ];
+                    delete result["color_code_1"];
+                    delete result["color_code_2"];
+                    result["material_code"] = [
+                      result["material_code_1"],
+                      result["material_code_2"],
+                      result["material_code_3"],
+                    ];
+                    delete result["material_code_1"];
+                    delete result["material_code_2"];
+                    delete result["material_code_3"];
+                    response.status(200);
+                    response.send(result);
+                  }
+                }
+              );
             }
           }
         }

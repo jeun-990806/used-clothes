@@ -22,6 +22,7 @@ if (!fs.existsSync("./images")) {
   fs.mkdirSync("./images");
 }
 
+app.use(express.static("images"));
 app.use(
   session({
     secret: "keyboard cat",
