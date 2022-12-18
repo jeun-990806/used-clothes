@@ -1,24 +1,23 @@
-const swagger_ui = require("swagger-ui-express")
-const swagger_js_doc = require("swagger-jsdoc")
+const swagger_ui = require("swagger-ui-express");
+const swagger_js_doc = require("swagger-jsdoc");
 
 const options = {
   swaggerDefinition: {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
-      version: '1.0.0',
-      title: 'Used Clothes',
-      description:
-        '중고의류거래플랫폼 API',
+      version: "1.0.0",
+      title: "Used Clothes",
+      description: "중고의류거래플랫폼 API",
     },
     servers: [
       {
-        url: 'http://118.67.142.10/', // 요청 URL
+        url: "https://used-clothes.o-r.kr/", // 요청 URL
       },
     ],
   },
-  apis: ['./routers/*.js', './main.js'], //Swagger 파일 연동
-}
+  apis: ["./routers/*.js", "./main.js"], //Swagger 파일 연동
+};
 
-const specs = swagger_js_doc(options)
+const specs = swagger_js_doc(options);
 
-module.exports = { swagger_ui, specs }
+module.exports = { swagger_ui, specs };
